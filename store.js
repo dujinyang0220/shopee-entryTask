@@ -97,6 +97,33 @@ module.exports = class Store {
      * @param {object} params 
      */
     find (type, params) {
+        if(!type || typeof type !== 'string') 
+            throw new Error('请传入正确的表名~')
+        if(!params || typeof params !== 'object') 
+            throw new Error('请传入正确的查询条件~')
+
+        const path = genModelPath(type)
+
+        return new Promise((resolve, reject) => {
+            fs.readFile(path, 'utf8', (err, fd) => {
+                if (err) 
+                    throw err
+                
+                let list = fd ? JSON.parse(fd) : reject('没有查询到数据~')
+                let recordList = list.filter(v => {
+                    let flag = true
+
+                    Object.keys(params).forEach(k => {
+                        v[k] !== params[k] && (flag = false)
+                    })
+
+                    return flag
+                })
+
+                resolve(recordList)
+            })
+        })
+
         return recordList
     }
 

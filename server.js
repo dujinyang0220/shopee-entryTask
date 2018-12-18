@@ -11,7 +11,13 @@ run()
 async function run () { 
     // await addModel()
     // await addRecord()
-    await findRecord()
+    // await findRecord()
+    store.find('event', {
+        name: 'test1'
+    })
+        .then(myRecords => {
+            console.log(myRecords)
+        })
 }
 
 /**
@@ -50,6 +56,9 @@ async function addRecord () {
     })
 }
 
+/**
+ * 查询并缓存 ID 为 1 的活动记录
+ */
 async function findRecord () {
     await store.findRecord('event', 1)
         .then(myRecord => {
