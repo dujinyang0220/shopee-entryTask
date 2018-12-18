@@ -18,7 +18,27 @@ module.exports = class Record {
      * 在服务器端删除当前的记录
      */
     destroyRecord () {
+        const { type, id } = _params
+        const path = `./data/${type}.json`
 
+        return new Promise((resolve, reject) => {
+            fs.readFile(path, 'utf8', (err, fd) => {
+                if (err) 
+                    throw err
+                
+                let list = fd ? JSON.parse(fd) : resolve('没有查询到数据~')
+                let resultIndex = list.find(v => v.id === id)
+
+                list.splice(resultIndex, 1)
+                let newContent = JSON.stringify(list, null, 4)
+        
+                fs.writeFile(path, newContent, 'utf8', err => {
+                    if (err) reject('删除失败')
+
+                    resolve('删除成功')
+                })
+            })
+        })
     }
 
     /**
@@ -43,15 +63,19 @@ module.exports = class Record {
                     throw err
                 
                 let list = fd ? JSON.parse(fd) : resolve('没有查询到数据~')
+                let result = list.find(v => v.id === id)
                 let resultIndex = list.find(v => v.id === id)
+                
+                Object.keys(this).forEach(k => {
+                    result[k] = this[k]
+                })
 
-                list[resultIndex] = this
+                list[resultIndex] = result
                 let newContent = JSON.stringify(list, null, 4)
         
                 fs.writeFile(path, newContent, 'utf8', err => {
                     if (err) reject('保存失败')
 
-                    console.log(`Modified record success...`)
                     resolve('保存成功')
                 })
             })

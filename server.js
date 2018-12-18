@@ -3,22 +3,15 @@ const Store = require('./store.js')
 // 创建一个全局 Store
 const store = new Store()
 
-// run()
-store.defineModel('event', {
-    name: '',
-    begin_time: 0,
-    end_time: 0,
-    description: '',
-    creator: {},
-    create_time: 0,
-    update_time: 0
-})
+run()
+
 /**
  * 运行程序
  */
 async function run () { 
-    await addModel()
-    await addRecord()
+    // await addModel()
+    // await addRecord()
+    await findRecord()
 }
 
 /**
@@ -57,22 +50,30 @@ async function addRecord () {
     })
 }
 
-store.findRecord('event', 1)
-    .then(myRecord => {
-        console.log(myRecord.id) 
-        console.log(myRecord.name) 
+async function findRecord () {
+    await store.findRecord('event', 1)
+        .then(myRecord => {
+            console.log(myRecord.id) 
+            console.log(myRecord.name) 
 
-        // myRecord.id = 2
-        myRecord.name = 'Bye World'
-        myRecord.rollback()
-        myRecord.name = 'Apple'
+            // myRecord.id = 2
+            myRecord.name = 'Bye World'
+            myRecord.rollback()
+            myRecord.name = 'Apple'
 
-        return myRecord.save()
-    })
-    .then((myRecord) => {
-        console.log(myRecord)
-        return store.findRecord('event', 1)
-    })
+            return myRecord.save()
+        })
+        .then(res => {
+            console.log(res)
+            return store.findRecord('event', 1)
+        })
+        .then((myRecord) => {
+            return myRecord.destroyRecord()
+        })
+        .then(res => {
+            console.log(res)
+        })
+}
 
 // 查询并缓存 ID 为 1 的活动记录
 // 未命中缓存则发起请求 GET /event/1
