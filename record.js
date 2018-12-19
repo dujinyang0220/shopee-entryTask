@@ -26,7 +26,7 @@ module.exports = class Record {
                 if (err) 
                     throw err
                 
-                let list = fd ? JSON.parse(fd) : resolve('没有查询到数据~')
+                let list = fd ? JSON.parse(fd) : reject('没有查询到数据~')
                 let resultIndex = list.find(v => v.id === id)
 
                 list.splice(resultIndex, 1)
@@ -42,15 +42,6 @@ module.exports = class Record {
     }
 
     /**
-     * 放弃所有未保存的记录更改
-     */
-    rollback () {
-        Object.keys(_backup).forEach(v => {
-            this[v] = _backup[v]
-        })
-    }
-
-    /**
      * 在服务器端保存最新的更改
      */
     save () {
@@ -62,23 +53,36 @@ module.exports = class Record {
                 if (err) 
                     throw err
                 
-                let list = fd ? JSON.parse(fd) : resolve('没有查询到数据~')
+                let list = fd ? JSON.parse(fd) : reject('没有查询到数据~')
                 let result = list.find(v => v.id === id)
                 let resultIndex = list.find(v => v.id === id)
                 
-                Object.keys(this).forEach(k => {
-                    result[k] = this[k]
-                })
+                if(result === undefined) reject('没有查询到数据~')
+                else{
+                    Object.keys(this).forEach(k => {
+                        result[k] = this[k]
+                    })
+                    result.update_time = new Date().getTime()
 
-                list[resultIndex] = result
-                let newContent = JSON.stringify(list, null, 4)
-        
-                fs.writeFile(path, newContent, 'utf8', err => {
-                    if (err) reject('保存失败')
+                    list[resultIndex] = result
+                    let newContent = JSON.stringify(list, null, 4)
+            
+                    fs.writeFile(path, newContent, 'utf8', err => {
+                        if (err) reject('保存失败')
 
-                    resolve('保存成功')
-                })
+                        resolve('保存成功')
+                    })
+                }
             })
+        })
+    }
+
+    /**
+     * 放弃所有未保存的记录更改
+     */
+    rollback () {
+        Object.keys(_backup).forEach(v => {
+            this[v] = _backup[v]
         })
     }
 }

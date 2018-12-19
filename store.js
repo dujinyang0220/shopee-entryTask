@@ -1,7 +1,10 @@
 const fs = require('fs')
 const Record = require('./record.js')
 
+// 表文件
 const modelPath = genModelPath('model')
+// 缓存文件
+const cachePath = genModelPath('cache')
 
 module.exports = class Store {
     constructor () {
@@ -92,11 +95,141 @@ module.exports = class Store {
     }
 
     /**
-     * 
+     * 根据条件查询一组记录并缓存
      * @param {string} type 
      * @param {object} params 
      */
     find (type, params) {
+        if(!type || typeof type !== 'string') 
+            throw new Error('请传入正确的表名~')
+        if(!params || typeof params !== 'object') 
+            throw new Error('请传入正确的查询条件~')
+        
+        return new Promise((resolve, reject) => {
+            fs.readFile(cachePath, 'utf8', async (err, fd) => {
+                if (err) {
+                    if(err.code === 'ENOENT')
+                        createFile(cachePath)
+                    else 
+                        throw err
+                }
+                
+                let condition = {
+                    type, params
+                }
+
+                // 缓存为空，查询数据库
+                if(fd === '') {
+                    let record = await this.query(type, params)
+                    resolve(record)
+
+                    // 写入缓存
+                    addCache(condition, record)
+                }
+                else {
+                    let list = fd ? JSON.parse(fd) : []
+                    let result = list.find(v => JSON.stringify(v.condition) === JSON.stringify(condition))
+
+                    // 缓存未命中，查询数据库
+                    if(result === undefined) {
+                        let record = await this.query(type, params)
+                        resolve(record)
+    
+                        // 写入缓存
+                        addCache(condition, record)
+                    }
+                    else {
+                        let recordList = result.result
+        
+                        resolve(recordList)
+
+                        console.log('Get from cache...')
+                    }
+                }
+            })
+        })
+    }
+
+    /**
+     * 查询一条记录并缓存
+     * @param {string} type 
+     * @param {number} id 
+     */
+    findRecord (type, id) {
+        if(!type || typeof type !== 'string') 
+            throw new Error('请传入正确的表名~')
+        if(typeof id !== 'number' || id < 0) 
+            throw new Error('请传入正确的id~')
+        
+        return new Promise((resolve, reject) => {
+            fs.readFile(cachePath, 'utf8', (err, fd) => {
+                if (err) {
+                    if(err.code === 'ENOENT')
+                        createFile(cachePath)
+                    else 
+                        throw err
+                }
+                
+                let condition = {
+                    type, id
+                }
+
+                // 缓存为空，查询数据库
+                if(fd === '') {
+                    this.queryRecord(type, id).then(myRecord => {
+                        resolve(myRecord)
+
+                        // 写入缓存
+                        addCache(condition, myRecord)
+                    }).catch(e => {
+                        console.log(e)
+                    })
+                }
+                else {
+                    let list = fd ? JSON.parse(fd) : []
+                    let result = list.find(v => JSON.stringify(v.condition) === JSON.stringify(condition))
+
+                    // 缓存未命中，查询数据库
+                    if(result === undefined) {
+                        this.queryRecord(type, id).then(myRecord => {
+                            resolve(myRecord)
+    
+                            // 写入缓存
+                            addCache(condition, myRecord)
+                        }).catch(e => {
+                            console.log(e)
+                        })
+                    }
+                    else {
+                        let record = new Record(result.result, condition)
+                        let originId = record.id
+
+                        Object.defineProperty(record, 'id', {
+                            enumerable: false,
+                            configurable: true,
+                            set (newVal) {
+                                if(originId !== newVal)
+                                    throw new Error('id 不可修改')
+                            },
+                            get () {
+                                return originId
+                            }
+                        })
+                        resolve(record)
+
+                        console.log('Get from cache...')
+                    }
+                }
+            })
+        })
+    }
+
+    /**
+     * 根据条件查询一组记录（不缓存）
+     * @param {string} type 
+     * @param {object} params 
+     */
+    query (type, params) {
         if(!type || typeof type !== 'string') 
             throw new Error('请传入正确的表名~')
         if(!params || typeof params !== 'object') 
@@ -123,16 +256,14 @@ module.exports = class Store {
                 resolve(recordList)
             })
         })
-
-        return recordList
     }
 
     /**
-     * 
+     * 查询一条记录（不缓存）
      * @param {string} type 
      * @param {number} id 
      */
-    findRecord (type, id) {
+    queryRecord (type, id) {
         if(!type || typeof type !== 'string') 
             throw new Error('请传入正确的表名~')
         if(typeof id !== 'number' || id < 0) 
@@ -150,48 +281,41 @@ module.exports = class Store {
                 }
                 let list = fd ? JSON.parse(fd) : reject('没有查询到数据~')
                 let result = list.find(v => v.id === id)
-                let record = new Record(result, params)
-                let originId = record.id
+                if(result === undefined) reject('没有查询到数据~')
+                else{
+                    let record = new Record(result, params)
+                    let originId = record.id
 
-                Object.defineProperty(record, 'id', {
-                    enumerable: false,
-                    configurable: true,
-                    set (newVal) {
-                        if(originId !== newVal)
-                            throw new Error('id 不可修改')
-                    },
-                    get () {
-                        return originId
-                    }
-                })
-                resolve(record)
+                    Object.defineProperty(record, 'id', {
+                        enumerable: true,
+                        configurable: true,
+                        set (newVal) {
+                            if(originId !== newVal)
+                                throw new Error('id 不可修改')
+                        },
+                        get () {
+                            return originId
+                        }
+                    })
+                    resolve(record)
+                }
             })
         })
     }
 
     /**
-     * 
-     * @param {string} type 
-     * @param {object} params 
-     */
-    query (type, params) {
-        return recordList
-    }
-
-    /**
-     * 
-     * @param {string} type 
-     * @param {number} id 
-     */
-    queryRecord (type, id) {
-        return record
-    }
-
-    /**
-     * 
+     * 清空所有已缓存的记录
      */
     unloadAll () {
+        const path = genModelPath('cache')
+        
+        fs.unlink(path, err => {
+            if (err.code !== 'ENOENT') throw err
+            
+            console.log(`成功删除 ${path}`)
 
+            createFile(path)
+        })
     }
 }
 
@@ -211,12 +335,45 @@ function genModelPath (name) {
  */
 function createFile (path) {
     fs.open(path, 'w+', (err, fd) => {
-        if (err) 
-            throw err
+        if (err) throw err
 
         fs.close(fd, err => {
-            if (err) 
-                throw err
+            if (err) throw err
+            
+            console.log(`创建 '${path}' 成功`)
+        })
+    })
+}
+
+/**
+ * 查询结果写入缓存
+ * @param {object} condition 
+ * @param {object} result 
+ */
+function addCache (condition, result) {
+    return new Promise((resolve, reject) => {
+        fs.readFile(cachePath, 'utf8', async (err, fd) => {
+            if (err) {
+                if(err.code === 'ENOENT')
+                    await createFile(cachePath)
+                else 
+                    throw err
+            }
+            
+            let list = fd ? JSON.parse(fd) : []
+            let cache = {
+                condition, result
+            }
+            list.push(cache)
+            let newContent = JSON.stringify(list, undefined, 4)
+
+            fs.writeFile(cachePath, newContent, 'utf8', err => {
+                if (err) 
+                    throw err
+                
+                console.log(`Add cache success...`)
+                resolve()
+            })
         })
     })
 }

@@ -1,3 +1,5 @@
+const http = require('http')
+const querystring = require('querystring')
 const Store = require('./store.js')
 
 // 创建一个全局 Store
@@ -12,12 +14,28 @@ async function run () {
     // await addModel()
     // await addRecord()
     // await findRecord()
-    store.find('event', {
-        name: 'test1'
+    const postData = {
+        request: [
+            {
+                method: 'get', url: 'api/r1/3', body: null
+            },
+            {
+                method: 'get', url: 'api/r2/5', body: null
+            },
+            {
+                method: 'post', url: 'api/r3', body: {
+                    name: 'hello',
+                    age: 'world'
+                }
+            }
+        ]
+    }
+
+    post('/', postData).then(resList => {
+        console.log(resList)
+    }).catch(e => {
+        console.log(e)
     })
-        .then(myRecords => {
-            console.log(myRecords)
-        })
 }
 
 /**
@@ -82,32 +100,33 @@ async function findRecord () {
         .then(res => {
             console.log(res)
         })
+        .catch(e => {
+            console.log(e)
+        })
 }
 
-// 查询并缓存 ID 为 1 的活动记录
-// 未命中缓存则发起请求 GET /event/1
-// store.findRecord('event', 1).then((myRecord) => {
-//   console.log(myRecord.id) // 返回 1
-//   console.log(myRecord.name) // 返回 'Hello World'
-//   myRecord.id = 2 // 抛出异常，id 不允许修改
-
-//   // 将活动名称更改为 'Bye World'，此时尚未保存在服务端
-//   myRecord.name = 'Bye World'
-
-//   // 放弃所有更改，此时 name 变回 'Hello World'
-//   myRecord.rollback()
-//   myRecord.name = 'Apple'
-
-//   // 将最新的结果保存到服务器
-//   // 对于已存在的记录（ID不为空） 发出 PUT /event/1
-//   // 对于新记录 发出 POST /event 请求
-//   return myRecord.save()
-// }).then(() => {
-
-//   // 因为已经缓存这条记录，所以不会发出 HTTP 请求
-//   return store.findRecord('event', 1)
-// }).then((myRecord) => {
-
-//   // 在服务器端删除这条记录，发送 DELETE /event/1/
-//   return myRecord.destroyRecord()
-// })
+function post (path, postData) {
+    return new Promise((resolve, reject) => {
+        const options = {
+            hostname: '127.0.0.1',
+            port: 8888,
+            path,
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json',
+            }
+        }
+        const req = http.request(options, res => {
+            res.on('data', data => {
+                resolve(JSON.parse(data.toString()))
+            })
+        })
+        req.on('error', e => {
+            reject(`请求遇到问题: ${e.message}`)
+        })
+        
+        // 将数据写入到请求主体。
+        req.write(JSON.stringify(postData))
+        req.end()
+    })
+}
