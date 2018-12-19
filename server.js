@@ -11,9 +11,10 @@ run()
  * 运行程序
  */
 async function run () { 
-    // await addModel()
-    // await addRecord()
-    // await findRecord()
+    await addModel()
+    await addRecord()
+    await findRecord()
+
     const postData = {
         request: [
             {
@@ -105,6 +106,11 @@ async function findRecord () {
         })
 }
 
+/**
+ * 
+ * @param {string} path api路径
+ * @param {object} postData 请求数据
+ */
 function post (path, postData) {
     return new Promise((resolve, reject) => {
         const options = {
