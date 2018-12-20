@@ -5,6 +5,7 @@ const Store = require('./store.js')
 // 创建一个全局 Store
 const store = new Store()
 
+// 入口函数
 run()
 
 /**
@@ -14,29 +15,7 @@ async function run () {
     await addModel()
     await addRecord()
     await findRecord()
-
-    const postData = {
-        request: [
-            {
-                method: 'get', url: 'api/r1/3', body: null
-            },
-            {
-                method: 'get', url: 'api/r2/5', body: null
-            },
-            {
-                method: 'post', url: 'api/r3', body: {
-                    name: 'hello',
-                    age: 'world'
-                }
-            }
-        ]
-    }
-
-    post('/', postData).then(resList => {
-        console.log(resList)
-    }).catch(e => {
-        console.log(e)
-    })
+    batchRequest()
 }
 
 /**
@@ -134,5 +113,33 @@ function post (path, postData) {
         // 将数据写入到请求主体。
         req.write(JSON.stringify(postData))
         req.end()
+    })
+}
+
+/**
+ * 同时发起多个请求
+ */
+function batchRequest () {
+    const postData = {
+        request: [
+            {
+                method: 'get', url: 'api/r1/3', body: null
+            },
+            {
+                method: 'get', url: 'api/r2/5', body: null
+            },
+            {
+                method: 'post', url: 'api/r3', body: {
+                    name: 'hello',
+                    age: 'world'
+                }
+            }
+        ]
+    }
+
+    post('/', postData).then(resList => {
+        console.log(resList)
+    }).catch(e => {
+        console.log(e)
     })
 }
