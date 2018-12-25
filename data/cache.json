@@ -1,18 +1,1 @@
-[
-    {
-        "condition": {
-            "type": "event",
-            "id": 1
-        },
-        "result": {
-            "name": "Apple",
-            "begin_time": 0,
-            "end_time": 0,
-            "description": "",
-            "creator": {},
-            "create_time": 1545209697263,
-            "update_time": 0,
-            "id": 1
-        }
-    }
-]
+[]
